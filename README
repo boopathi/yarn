@@ -1,0 +1,12 @@
+Fork of https://github.com/yarnpkg/yarn to not run scripts from malicious packages during installation
+
+Configuration: `~/.yarn-malicious`
+
+Usage:
+
+Create a `.yarn-malicious` in your `$HOME` folder.
+
+```
+pre-commit
+husky
+```

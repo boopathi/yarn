@@ -9,6 +9,7 @@ import {MessageError} from '../../errors.js';
 import {NoopReporter} from '../../reporters/index.js';
 import * as fs from '../../util/fs.js';
 import * as constants from '../../constants.js';
+import getMalicious from '../../util/yarn-malicious.js';
 
 const path = require('path');
 const emoji = require('node-emoji');
@@ -79,9 +80,15 @@ export async function run(config: Config, reporter: Reporter, flags: Object, arg
   // save manifests
   await config.saveRootManifests(rootManifests);
 
+  const malicious = new Set(await getMalicious());
+
   // run hooks - npm runs these one after another
   for (const action of ['preuninstall', 'uninstall', 'postuninstall']) {
-    for (const [loc] of manifests) {
+    for (const [loc, pkg] of manifests) {
+      if (malicious.has(pkg.name)) {
+        reporter.warn("maliciousPackageScript Ignoring uninstall scripts for package " + pkg.name);
+        continue;
+      }
       await config.executeLifecycleScript(action, loc);
     }
   }

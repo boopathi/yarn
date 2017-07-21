@@ -11,6 +11,8 @@ import * as fsUtil from './util/fs.js';
 import {getPlatformSpecificPackageFilename} from './util/package-name-utils.js';
 import {packWithIgnoreAndHeaders} from './cli/commands/pack.js';
 
+import getMalicious from './util/yarn-malicious.js';
+
 const fs = require('fs');
 const invariant = require('invariant');
 const path = require('path');
@@ -29,6 +31,7 @@ export default class PackageInstallScripts {
     this.config = config;
     this.force = force;
     this.artifacts = {};
+    this.malicious = new Set();
   }
 
   needsPermission: boolean;
@@ -173,6 +176,11 @@ export default class PackageInstallScripts {
   }
 
   packageCanBeInstalled(pkg: Manifest): boolean {
+    // ignore malicious scripts
+    if (this.malicious.has(pkg.name)) {
+      this.reporter.warn("maliciousPackageScript Ignoring install scripts for package " + pkg.name);
+      return false;
+    }
     const cmds = this.getInstallCommands(pkg);
     if (!cmds.length) {
       return false;
@@ -293,6 +301,10 @@ export default class PackageInstallScripts {
   }
 
   async init(seedPatterns: Array<string>): Promise<void> {
+    for (const m of await getMalicious()) {
+      this.malicious.add(m);
+    }
+
     const workQueue = new Set();
     const installed = new Set();
     const pkgs = this.resolver.getTopologicalManifests(seedPatterns);
